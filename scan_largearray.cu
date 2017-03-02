@@ -232,10 +232,10 @@ runTest( int argc, char** argv)
 
     printf("GPU output: \n");
     for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-      printf("%f ",d_odata[i]);
+      printf("%d ",h_data[i]);
     printf("CPU output: \n");
     for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-      printf("%f ",reference[i]);
+      printf("%d ",reference[i]);
 
     // Check if the result is equivalent to the expected soluion
     unsigned int result_regtest = cutComparef( reference, h_data, num_elements);
