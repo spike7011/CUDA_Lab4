@@ -42,11 +42,11 @@
 #include <string.h>
 #include <math.h>
 #include <cutil.h>
+#include "CONSTANTS.h"
 
 // includes, kernels
 #include <scan_largearray_kernel.cu>
 
-#define DEFAULT_NUM_ELEMENTS 512
 #define MAX_RAND 3
 
 
@@ -181,7 +181,7 @@ runTest( int argc, char** argv)
 	cutStartTimer(timer);
  
     computeGold( reference, h_data, num_elements);
-  printf("\nCPU output: \n");
+ // printf("\nCPU output: \n");
   
 
 	cutStopTimer(timer);
@@ -244,13 +244,13 @@ runTest( int argc, char** argv)
         WriteFile(h_data, argv[1], num_elements);
     }
 
- 	printf("\nGPU/CPU output: \n");
+ /*	printf("\nGPU/CPU output: \n");
      for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
      {
        printf("%g %g %g\n", h_data[i], reference[i], input[i]);
      }
      printf("\n\n\n\n\n\n");
-
+	*/
     // Check if the result is equivalent to the expected soluion
     unsigned int result_regtest = cutComparef( reference, h_data, num_elements);
     printf( "Test %s\n", (1 == result_regtest) ? "PASSED" : "FAILED");
