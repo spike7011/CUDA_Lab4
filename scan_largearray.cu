@@ -82,9 +82,9 @@ runTest( int argc, char** argv)
     int errorM = 0;
     float device_time;
     float host_time;
-    int* size = (int*)malloc(1 * sizeof(int));
+    int* size = 0;
     unsigned int data2read = 1;
-    int num_elements = DEFAULT_NUM_ELEMENTS; // Must support large, non-power-of-2 arrays
+    int num_elements = 0; // Must support large, non-power-of-2 arrays
 
     // allocate host memory to store the input data
     unsigned int mem_size = sizeof( float) * num_elements;
@@ -172,15 +172,15 @@ runTest( int argc, char** argv)
     float* reference = (float*) malloc( mem_size);
 	cutStartTimer(timer);
   printf("\nCPU input: \n");
-  for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+  for(unsigned int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
   {
-    printf("%d ",h_data[i]);
+    printf("%f ",h_data[i]);
   }
     computeGold( reference, h_data, num_elements);
   printf("\nCPU output: \n");
-  for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+  for(unsigned int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
   {
-    printf("%d ",reference[i]);
+    printf("%f ",reference[i]);
   }
 
 	cutStopTimer(timer);
@@ -246,11 +246,11 @@ runTest( int argc, char** argv)
     // {
     //   printf("%d ",reference[i]);
     // }
-    // printf("\nGPU output: \n");
-    // for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-    // {
-    //   printf("%d ",h_data[i]);
-    // }
+     printf("\nGPU output: \n");
+     for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+     {
+       printf("%f ",h_data[i]);
+     }
 
 
     // Check if the result is equivalent to the expected soluion
