@@ -1,0 +1,6 @@
+git pull origin master
+touch scan_gold.cpp
+touch scan_largearray_kernel.cu
+touch scan_largearray.cu
+make clean
+make
