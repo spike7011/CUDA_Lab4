@@ -28,9 +28,9 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 	extern __shared__ float temp[];// allocated on invocation
 	int thid = threadIdx.x;
 	int offset = 1;
-	temp[2*thid] = g_idata[2*thid]; // load input into shared memory
-	temp[2*thid+1] = g_idata[2*thid+1];
-	for (int d = n>>1; d > 0; d >>= 1) // build sum in place up the tree
+	temp[2*thid] = inArray[2*thid]; // load input into shared memory
+	temp[2*thid+1] = inArray[2*thid+1];
+	for (int d = numElements>>1; d > 0; d >>= 1) // build sum in place up the tree
 	{
 		__syncthreads();
 		if (thid < d)
@@ -41,8 +41,8 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 		}
 		offset *= 2;
 	}
-	if (thid == 0) { temp[n - 1] = 0; } // clear the last element
-	for (int d = 1; d < n; d *= 2) // traverse down tree & build scan
+	if (thid == 0) { temp[numElements - 1] = 0; } // clear the last element
+	for (int d = 1; d < numElements; d *= 2) // traverse down tree & build scan
 	{
 		offset >>= 1;
 		__syncthreads();
@@ -56,8 +56,8 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 		}
 	}
 	__syncthreads();
-	g_odata[2*thid] = temp[2*thid]; // write results to device memory
-	g_odata[2*thid+1] = temp[2*thid+1];
+	outArray[2*thid] = temp[2*thid]; // write results to device memory
+	outArray[2*thid+1] = temp[2*thid+1];
 
 }
 // **===-----------------------------------------------------------===**
