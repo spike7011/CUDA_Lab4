@@ -6,53 +6,66 @@
 #include "CONSTANTS.h"
 
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 // Lab4: Host Helper Functions (allocate your own data structure...)
 
 // Lab4: Device Functions
-
+__device__ unsigned int count = 0;
+__device__ float partial_sum = 0;
 
 // Lab4: Kernel Functions
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
+
+	__shared__ unsigned int mbid;
+	__shared__ float temp[BLOCK_SIZE];
+	float partial[STEPS];
 	
-	__shared__ int bid;
+	unsigned int tid = threadIdx.x+__mul24(16,threadIdx.y);
+	if(tid == 0)
+	{
+	mbid = atomicInc(&count, (unsigned int) -1);
+	}
+	syncthreads();
 	
-	int partial_sum = 0;
-	bid  = blockIdx.x;
-	__shared__ float temp[DEFAULT_NUM_ELEMENTS];
-	temp[0] = 0;
+	unsigned int bid = blockIdx.x;
+	
 	odata[0] = 0;
- 	double total_sum;
-	
-	
-	unsigned int tid = __mul24(threadIdx.y, 16) + threadIdx.x;
+ 	__shared__ double block_sum;
+ 	
 	unsigned int element;
 	
-	  	for(int j = 1; j < DEFAULT_NUM_ELEMENTS; j++)
-	  	{ 		
-	  		//element = __mul24(BLOCK_SIZE, blockIdx.x)+ j;
-	  		total_sum += idata[j];
-			temp[j] = temp[j-1]+idata[j-1];
+	
+	
+	for(int i = 0; i < STEPS; i++)
+	{
+			block_sum = 0;
+			temp[0] = 0;
+		 	for(int j = 1; j < BLOCK_SIZE; j++)
+		  	{ 		
+		  		element = __mul24(BLOCK_SIZE, bid)+ j;
+		  		block_sum += idata[element];
+				temp[j] = temp[j-1]+idata[element-1];
 			
-	  	}
-	  	
-	  	syncthreads();
-
-	  	
-	  	
-	  	for(int j = 0; j < DEFAULT_NUM_ELEMENTS; j++)
+		  	}
+		  	if(i== 0)
+		  	partial[i] = 0;
+		  	else partial[i] = block_sum+partial[i-1];
+		  	syncthreads();
+	 }
+		
+	for(int i = 0; i < STEPS;i++)
+	if(i == mbid-1)
+	{
+	  	for(int j = 0; j < BLOCK_SIZE; j++)
 	  	{
-	  	//element = __mul24(BLOCK_SIZE, blockIdx.x)+ j;
-	  	odata[j] = temp[j];
-	  	      
+	  	element = __mul24(BLOCK_SIZE, i)+ j;
+	  	odata[element] = temp[j]+partial[i];
 	  	}
 	  	syncthreads();
-	  
-}
+	  }
+} 
+	 
+
 
 
 
