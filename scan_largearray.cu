@@ -171,7 +171,18 @@ runTest( int argc, char** argv)
     // compute reference solution
     float* reference = (float*) malloc( mem_size);
 	cutStartTimer(timer);
+  printf("\nCPU input: \n");
+  for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+  {
+    printf("%d ",h_data[i]);
+  }
     computeGold( reference, h_data, num_elements);
+  printf("\nCPU output: \n");
+  for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+  {
+    printf("%d ",reference[i]);
+  }
+
 	cutStopTimer(timer);
     printf("\n\n**===-------------------------------------------------===**\n");
     printf("Processing %d elements...\n", num_elements);
@@ -230,16 +241,16 @@ runTest( int argc, char** argv)
         WriteFile(h_data, argv[1], num_elements);
     }
 
-    printf("\nCPU output: \n");
-    for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-    {
-      printf("%d ",reference[i]);
-    }
-    printf("\nGPU output: \n");
-    for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-    {
-      printf("%d ",h_data[i]);
-    }
+    // printf("\nCPU output: \n");
+    // for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+    // {
+    //   printf("%d ",reference[i]);
+    // }
+    // printf("\nGPU output: \n");
+    // for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+    // {
+    //   printf("%d ",h_data[i]);
+    // }
 
 
     // Check if the result is equivalent to the expected soluion

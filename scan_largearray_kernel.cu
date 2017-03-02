@@ -10,7 +10,7 @@
 #define LOG_NUM_BANKS 5
 // Lab4: You can use any other block size you wish.
 #define BLOCK_SIZE 256
-#define DEFAULT_NUM_ELEMENTS 16
+#define DEFAULT_NUM_ELEMENTS 256
 
 // Lab4: Host Helper Functions (allocate your own data structure...)
 float* AllocateDeviceArray(float * A)
@@ -21,18 +21,14 @@ float* AllocateDeviceArray(float * A)
 	return Adevice;
 }
 
-// Allocate a matrix of dimensions height*width
-//	If init == 0, initialize to all zeroes.
-//	If init == 1, perform random initialization.
 
-// Copy a host matrix to a device matrix.
+
 void CopyToDeviceArray(float * Adevice, float * Ahost)
 {
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
 	cudaMemcpy(Adevice, Ahost, size,cudaMemcpyHostToDevice);
 }
 
-// Copy a device matrix to a host matrix.
 void CopyFromDeviceArray(float * Ahost, float * Adevice)
 {
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
