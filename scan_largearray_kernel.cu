@@ -56,11 +56,12 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	odata[0] = 0;
 	double total_sum = 0;
 
-	for( unsigned int i = 1; i < len; ++i)
+	for(unsigned int i = 1; i < len; ++i)
 	{
 		total_sum += idata[i-1];
 		odata[i] = idata[i-1] + odata[i-1];
 	}
+	syncthreads();
 	if (total_sum != odata[len-1])
 	printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
 }
