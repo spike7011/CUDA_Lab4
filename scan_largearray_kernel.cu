@@ -10,7 +10,8 @@
 #define LOG_NUM_BANKS 5
 // Lab4: You can use any other block size you wish.
 #define BLOCK_SIZE 256
-#define DEFAULT_NUM_ELEMENTS 256
+#define DEFAULT_NUM_ELEMENTS 512
+#define STEPS DEFAULT_NUM_ELEMENTS/BLOCK_SIZE
 
 // Lab4: Host Helper Functions (allocate your own data structure...)
 float* AllocateDeviceArray(float * A)
@@ -43,27 +44,40 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
 
 	__shared__ float temp[BLOCK_SIZE]; // allocated on invocation
+	__device__ float sums[STEPS];
+	__device int my_block_count = 0;
 	temp[0] = 0;
 	int stride = 1;
+
+	__shared__ unsigned int my_blockId;
+	if (threadIdx.x==0)
+	{
+		my_blockId = atomicInc( &my_block_count, (unsigned int) -1 );
+	}
+
 	int tid = __mul24(threadIdx.y, 16)+threadIdx.x;
 	int bid = blockIdx.x;
 	int i_element = __mul24(bid,BLOCK_SIZE)+tid;
 
-	odata[0] = 0;
 	double total_sum = 0;
 
-	if(tid==0)
+	for (int j = 1; j < BLOCK_SIZE; j++)
 	{
-		for(unsigned int i = 1; i < len; ++i)
-		{
-			total_sum += idata[i-1];
-			odata[i] = idata[i-1] + odata[i-1];
-		}
+		total_sum += idata[j];
+		temp[j] = temp[j-1]+idata[j-1];
 	}
+	syncthreads();
+	sums[my_blockId] = total_sum;
 
-		syncthreads();
-		//if (total_sum != odata[len-1])
-		//printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
+	int partial_sum = 0;
+
+	for(int i = 0; i < my_blockId; i++)
+		partial_sum += sums[i];
+	for(int j = 0; j < BLOCK_SIZE; j++)
+		odata[j+(my_blockId*BLOCK_SIZE)] = partial_sum + temp[j];
+	syncthreads();
+	//if (total_sum != odata[len-1])
+	//printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
 }
 
 
