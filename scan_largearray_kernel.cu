@@ -43,7 +43,7 @@ void CopyFromDeviceArray(float * Ahost, float * Adevice)
 
 
 // Lab4: Kernel Functions
-__global__ void computeKernel( float* reference, float* idata, const unsigned int len)
+__global__ void computeKernel( float* reference, float* idata, unsigned int len)
 {
 	// reference[0] = 0;
 	// double total_sum = 0;
@@ -67,14 +67,15 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
 	float * Adevice_in = AllocateDeviceArray(inArray);
-	CopyToDeviceArray(Adevice_in, inArray, size);
+	CopyToDeviceArray(Adevice_in, inArray);
 	float * Adevice_out = AllocateDeviceArray(outArray);
-	CopyToDeviceArray(Adevice_out, outArray, size);
+	CopyToDeviceArray(Adevice_out, outArray);
 
 	dim3 dimGrid(DEFAULT_NUM_ELEMENTS/BLOCK_SIZE,1);
 	dim3 dimBlock(16,16);
 
-	computeKernel << dimGrid, dimBlock >>> (Adevice_out ,Adevice_in, DEFAULT_NUM_ELEMENTS);
+ 	unsigned int len = DEFAULT_NUM_ELEMENTS;
+	computeKernel << dimGrid, dimBlock >>> (Adevice_out ,Adevice_in, len);
 	cudaThreadSynchronize();
 	CopyFromDeviceArray(outArray, Adevice_out);
 }
