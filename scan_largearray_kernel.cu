@@ -56,14 +56,18 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	odata[0] = 0;
 	double total_sum = 0;
 
-	for(unsigned int i = 1; i < len; ++i)
+	if(tid=0)
 	{
-		total_sum += idata[i-1];
-		odata[i] = idata[i-1] + odata[i-1];
+		for(unsigned int i = 1; i < len; ++i)
+		{
+			total_sum += idata[i-1];
+			odata[i] = idata[i-1] + odata[i-1];
+		}
 	}
-	syncthreads();
-	if (total_sum != odata[len-1])
-	printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
+
+		syncthreads();
+		if (total_sum != odata[len-1])
+		printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
 }
 
 
@@ -86,8 +90,8 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 
 	unsigned int len = DEFAULT_NUM_ELEMENTS;
 	computeKernel <<< dimGrid, dimBlock >>> (outArray , inArray, len);
-	cudaThreadSynchronize();
-	CopyFromDeviceArray(answer, outArray);
+	//cudaThreadSynchronize();
+	//CopyFromDeviceArray(answer, outArray);
 }
 // **===-----------------------------------------------------------===**
 
