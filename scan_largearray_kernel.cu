@@ -75,7 +75,7 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 	dim3 dimBlock(16,16);
 
  	unsigned int len = DEFAULT_NUM_ELEMENTS;
-	computeKernel << dimGrid, dimBlock >>> (Adevice_out ,Adevice_in, len);
+	computeKernel << dimGrid, dimBlock >> (Adevice_out ,Adevice_in, len);
 	cudaThreadSynchronize();
 	CopyFromDeviceArray(outArray, Adevice_out);
 }
