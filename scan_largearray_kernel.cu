@@ -3,7 +3,7 @@
 
 // includes, kernels
 #include <assert.h>
-#include <scan_largearray.cu>
+//#include <scan_largearray.cu>
 
 
 #define NUM_BANKS 32
@@ -12,7 +12,7 @@
 #define BLOCK_SIZE 256
 
 // Lab4: Host Helper Functions (allocate your own data structure...)
-Matrix AllocateDeviceArray(const float * A)
+float AllocateDeviceArray(float * A)
 {
 	float * Adevice = A;
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
@@ -25,7 +25,7 @@ Matrix AllocateDeviceArray(const float * A)
 //	If init == 1, perform random initialization.
 
 // Copy a host matrix to a device matrix.
-void CopyToDeviceArray(float * Adevice, const float * Ahost)
+void CopyToDeviceArray(float * Adevice, float * Ahost)
 {
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
 	cudaMemcpy(Adevice, Ahost, size,
@@ -33,7 +33,7 @@ void CopyToDeviceArray(float * Adevice, const float * Ahost)
 	}
 
 	// Copy a device matrix to a host matrix.
-	void CopyFromDeviceArray(float * Ahost, const float * Adevice)
+	void CopyFromDeviceArray(float * Ahost, float * Adevice)
 	{
 		int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
 		cudaMemcpy(Ahost, Adevice, size,
