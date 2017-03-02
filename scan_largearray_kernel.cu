@@ -10,7 +10,7 @@
 #define LOG_NUM_BANKS 5
 // Lab4: You can use any other block size you wish.
 #define BLOCK_SIZE 256
-#define DEFAULT_NUM_ELEMENTS 16000000
+#define DEFAULT_NUM_ELEMENTS 16
 
 // Lab4: Host Helper Functions (allocate your own data structure...)
 float* AllocateDeviceArray(float * A)
