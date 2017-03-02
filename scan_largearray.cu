@@ -197,6 +197,12 @@ runTest( int argc, char** argv)
     // Run just once to remove startup overhead for more accurate performance
     // measurement
     prescanArray(d_odata, d_idata, 16);
+    printf("GPU output: \n");
+    for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+      printf("%f ",d_odata[i]);
+    printf("CPU output: \n");
+    for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
+      printf("%f ",reference[i]);
 
     // Run the prescan
     CUT_SAFE_CALL(cutCreateTimer(&timer));
