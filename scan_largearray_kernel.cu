@@ -43,18 +43,26 @@ void CopyFromDeviceArray(float * Ahost, float * Adevice)
 
 
 // Lab4: Kernel Functions
-__global__ void computeKernel( float* reference, float* idata, unsigned int len)
+__global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
-	// reference[0] = 0;
-	// double total_sum = 0;
-	// for( unsigned int i = 1; i < len; ++i)
-	// {
-	//     total_sum += idata[i-1];
-	//     reference[i] = idata[i-1] + reference[i-1];
-	// }
-	// if (total_sum != reference[len-1])
-	//     printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
 
+	__shared__ float temp[BLOCK_SIZE]; // allocated on invocation
+	temp[0] = 0;
+	int stride = 1;
+	int tid = __mul24(threadIdx.y, 16)+threadIdx.x;
+	int bid = blockIdx.x;
+	int i_element = __mul24(bid,BLOCK_SIZE)+tid;
+
+	odata[0] = 0;
+	double total_sum = 0;
+
+	for( unsigned int i = 1; i < len; ++i)
+	{
+		total_sum += idata[i-1];
+		odata[i] = idata[i-1] + odata[i-1];
+	}
+	if (total_sum != odata[len-1])
+	printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
 }
 
 
@@ -66,18 +74,19 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 {
 
 	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
-	float * Adevice_in = AllocateDeviceArray(inArray);
-	CopyToDeviceArray(Adevice_in, inArray);
-	float * Adevice_out = AllocateDeviceArray(outArray);
-	CopyToDeviceArray(Adevice_out, outArray);
+	float * answer;
+	// float * Adevice_in = AllocateDeviceArray(inArray);
+	// CopyToDeviceArray(Adevice_in, inArray);
+	// float * Adevice_out = AllocateDeviceArray(outArray);
+	// CopyToDeviceArray(Adevice_out, outArray);
 
 	dim3 dimGrid(DEFAULT_NUM_ELEMENTS/BLOCK_SIZE,1);
 	dim3 dimBlock(16,16);
 
- 	unsigned int len = DEFAULT_NUM_ELEMENTS;
-	computeKernel <<< dimGrid, dimBlock >>> (Adevice_out ,Adevice_in, len);
+	unsigned int len = DEFAULT_NUM_ELEMENTS;
+	computeKernel <<< dimGrid, dimBlock >>> (outArray , inArray, len);
 	cudaThreadSynchronize();
-	CopyFromDeviceArray(outArray, Adevice_out);
+	CopyFromDeviceArray(answer, outArray);
 }
 // **===-----------------------------------------------------------===**
 
