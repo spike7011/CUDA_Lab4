@@ -89,6 +89,7 @@ runTest( int argc, char** argv)
     // allocate host memory to store the input data
     unsigned int mem_size = sizeof( float) * num_elements;
     float* h_data = (float*) malloc( mem_size);
+    float* input = (float*) malloc(mem_size);
 
     // * No arguments: Randomly generate input data and compare against the
     //   host's result.
@@ -115,10 +116,12 @@ runTest( int argc, char** argv)
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
+            input = (float*) malloc(mem_size);
 
             for( unsigned int i = 0; i < num_elements; ++i)
             {
                 h_data[i] = (int)(rand() % MAX_RAND);
+                input[i] = h_data[i];
             }
             WriteFile(h_data, argv[2], num_elements);
         break;
@@ -135,8 +138,11 @@ runTest( int argc, char** argv)
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
+            input = (float*) malloc(mem_size);
 
             errorM = ReadFile(h_data, argv[2], size[0]);
+            errorM = ReadFile(input, argv[2], size[0]);
+            
             if(errorM != 1)
             {
                 printf("Error reading input file!\n");
@@ -153,12 +159,14 @@ runTest( int argc, char** argv)
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
+            input = (float*) malloc(mem_size);
 
             // initialize the input data on the host
             for( unsigned int i = 0; i < num_elements; ++i)
             {
 //                h_data[i] = 1.0f;
                 h_data[i] = (int)(rand() % MAX_RAND);
+                input[i] = h_data[i];
             }
         break;
     }
@@ -171,17 +179,10 @@ runTest( int argc, char** argv)
     // compute reference solution
     float* reference = (float*) malloc( mem_size);
 	cutStartTimer(timer);
-  printf("\nCPU input: \n");
-  for(unsigned int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-  {
-    printf("%f ",h_data[i]);
-  }
+ 
     computeGold( reference, h_data, num_elements);
   printf("\nCPU output: \n");
-  for(unsigned int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-  {
-    printf("%f ",reference[i]);
-  }
+  
 
 	cutStopTimer(timer);
     printf("\n\n**===-------------------------------------------------===**\n");
@@ -199,6 +200,7 @@ runTest( int argc, char** argv)
     CUDA_SAFE_CALL( cudaMalloc( (void**) &d_odata, mem_size));
 
     // copy host memory to device input array
+   
     CUDA_SAFE_CALL( cudaMemcpy( d_idata, h_data, mem_size, cudaMemcpyHostToDevice) );
     // initialize all the other device arrays to be safe
     CUDA_SAFE_CALL( cudaMemcpy( d_odata, h_data, mem_size, cudaMemcpyHostToDevice) );
@@ -229,6 +231,7 @@ runTest( int argc, char** argv)
 
 
     // copy result from device to host
+    
     CUDA_SAFE_CALL(cudaMemcpy( h_data, d_odata, sizeof(float) * num_elements,
                                cudaMemcpyDeviceToHost));
 
@@ -241,17 +244,12 @@ runTest( int argc, char** argv)
         WriteFile(h_data, argv[1], num_elements);
     }
 
-    // printf("\nCPU output: \n");
-    // for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
-    // {
-    //   printf("%d ",reference[i]);
-    // }
-     printf("\nGPU output: \n");
+ 	printf("\nGPU/CPU output: \n");
      for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
      {
-       printf("%f ",h_data[i]);
+       printf("%g %g %g\n", h_data[i], reference[i], input[i]);
      }
-
+     printf("\n\n\n\n\n\n");
 
     // Check if the result is equivalent to the expected soluion
     unsigned int result_regtest = cutComparef( reference, h_data, num_elements);
@@ -259,8 +257,9 @@ runTest( int argc, char** argv)
 
     // cleanup memory
     cutDeleteTimer(timer);
-    free( h_data);
-    free( reference);
+    free(h_data);
+    free(reference);
+    free(input);
     cudaFree( d_odata);
     cudaFree( d_idata);
 }

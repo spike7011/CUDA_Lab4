@@ -14,70 +14,63 @@
 #define STEPS DEFAULT_NUM_ELEMENTS/BLOCK_SIZE
 
 // Lab4: Host Helper Functions (allocate your own data structure...)
-float* AllocateDeviceArray(float * A)
-{
-	float * Adevice = A;
-	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
-	cudaMalloc((void**)&Adevice, size);
-	return Adevice;
-}
-
-
-
-void CopyToDeviceArray(float * Adevice, float * Ahost)
-{
-	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
-	cudaMemcpy(Adevice, Ahost, size,cudaMemcpyHostToDevice);
-}
-
-void CopyFromDeviceArray(float * Ahost, float * Adevice)
-{
-	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
-	cudaMemcpy(Ahost, Adevice, size, cudaMemcpyDeviceToHost);
-}
 
 // Lab4: Device Functions
 
-
+__device__ float sums[STEPS];
+__device__ unsigned int count = 0;
 // Lab4: Kernel Functions
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
-
-	__shared__ float temp[BLOCK_SIZE]; // allocated on invocation
-	__device__ float sums[STEPS];
-	__device int my_block_count = 0;
-	temp[0] = 0;
-	int stride = 1;
-
-	__shared__ unsigned int my_blockId;
-	if (threadIdx.x==0)
-	{
-		my_blockId = atomicInc( &my_block_count, (unsigned int) -1 );
-	}
-
-	int tid = __mul24(threadIdx.y, 16)+threadIdx.x;
-	int bid = blockIdx.x;
-	int i_element = __mul24(bid,BLOCK_SIZE)+tid;
-
-	double total_sum = 0;
-
-	for (int j = 1; j < BLOCK_SIZE; j++)
-	{
-		total_sum += idata[j];
-		temp[j] = temp[j-1]+idata[j-1];
-	}
-	syncthreads();
-	sums[my_blockId] = total_sum;
-
+	
+	__shared__ int bid;
+	
 	int partial_sum = 0;
+	bid  = blockIdx.x;
+	__shared__ float temp[BLOCK_SIZE];
+	temp[0] = 0;
+	__shared__ double total_sum;
+	
+	
+	unsigned int tid = __mul24(threadIdx.y, 16) + threadIdx.x;
+	unsigned int element;
+	
+	  	for(int j = 0; j < BLOCK_SIZE; j++)
+	  	{
+	  		if (j== 0)
+	  			total_sum = 0;
+	  		else
+	  		{
+	  		element = __mul24(BLOCK_SIZE, blockIdx.x)+ j;
+	  		total_sum += idata[element];
+			temp[j] = temp[j-1]+idata[element-1];
+			}
+	  	}
+	  	sums[bid] = total_sum;
+	  	syncthreads();
 
-	for(int i = 0; i < my_blockId; i++)
-		partial_sum += sums[i];
-	for(int j = 0; j < BLOCK_SIZE; j++)
-		odata[j+(my_blockId*BLOCK_SIZE)] = partial_sum + temp[j];
-	syncthreads();
-	//if (total_sum != odata[len-1])
-	//printf("Warning: exceeding single-precision accuracy.  Scan will be inaccurate.\n");
+	  	if(bid != 0)
+	  	{
+	  	partial_sum += sums[STEPS-bid];
+	  	odata[bid*BLOCK_SIZE] = partial_sum;
+	  	}
+	  	else 
+	  	{
+	  	odata[bid] = 0;
+	  	partial_sum = 0;
+	  	}
+	  	
+	  	for(int j = 0; j < BLOCK_SIZE; j++)
+	  	{
+	  	 element = __mul24(BLOCK_SIZE, blockIdx.x)+ j;
+	  	 	if(j == 0)
+	  	 	odata[element] = partial_sum;
+	  	      else
+	  	       odata[element] = temp[j] + partial_sum;
+	  	      
+	  	}
+	  	syncthreads();
+	  
 }
 
 
@@ -88,8 +81,8 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 void prescanArray(float *outArray, float *inArray, int numElements)
 {
 
-	int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
-	float * answer;
+	//int size = DEFAULT_NUM_ELEMENTS * sizeof(float);
+	//float * answer;
 	// float * Adevice_in = AllocateDeviceArray(inArray);
 	// CopyToDeviceArray(Adevice_in, inArray);
 	// float * Adevice_out = AllocateDeviceArray(outArray);
@@ -107,3 +100,4 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 
 
 #endif // _PRESCAN_CU_
+
