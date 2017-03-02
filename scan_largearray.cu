@@ -82,9 +82,9 @@ runTest( int argc, char** argv)
     int errorM = 0;
     float device_time;
     float host_time;
-    int* size = NULL; //(int*)malloc(1 * sizeof(int));
+    int* size = (int*)malloc(1 * sizeof(int));
     unsigned int data2read = 1;
-    int num_elements = 0; // Must support large, non-power-of-2 arrays
+    int num_elements = DEFAULT_NUM_ELEMENTS; // Must support large, non-power-of-2 arrays
 
     // allocate host memory to store the input data
     unsigned int mem_size = sizeof( float) * num_elements;
@@ -110,7 +110,7 @@ runTest( int argc, char** argv)
                 exit(1);
             }
 
-            num_elements = size[0];
+            num_elements = DEFAULT_NUM_ELEMENTS;
 
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
@@ -233,7 +233,7 @@ runTest( int argc, char** argv)
     printf("GPU output: \n");
     for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
       printf("%d ",h_data[i]);
-    printf("CPU output: \n");
+    printf("\nCPU output: \n");
     for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
       printf("%d ",reference[i]);
 
