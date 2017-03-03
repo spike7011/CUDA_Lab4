@@ -9,62 +9,76 @@
 // Lab4: Host Helper Functions (allocate your own data structure...)
 
 // Lab4: Device Functions
-__device__ unsigned int count = 0;
-__device__ float partial_sum = 0;
+__device__ int count = -1;
+__device__ float partial[STEPS];
+//__device__ double global_block_sum = 0;
 
 // Lab4: Kernel Functions
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
-
-	__shared__ unsigned int mbid;
-	__shared__ float temp[BLOCK_SIZE];
-	float partial[STEPS];
+	int tid = __mul24(threadIdx.y, 16) + threadIdx.x;
+	int bid = blockIdx.x;
+	int element;
 	
-	unsigned int tid = threadIdx.x+__mul24(16,threadIdx.y);
+	__shared__  int mbid;
 	if(tid == 0)
-	{
-	mbid = atomicInc(&count, (unsigned int) -1);
-	}
+		mbid = atomicAdd(&count, 1);
 	syncthreads();
+		
+	__shared__ float temp[BLOCK_SIZE];
 	
-	unsigned int bid = blockIdx.x;
 	
 	odata[0] = 0;
- 	__shared__ double block_sum;
  	
-	unsigned int element;
+ 	
 	
+	temp[0] = 0;
 	
+	syncthreads();
 	
+	//each thread block does a partial summation
 	for(int i = 0; i < STEPS; i++)
 	{
-			block_sum = 0;
-			temp[0] = 0;
 		 	for(int j = 1; j < BLOCK_SIZE; j++)
 		  	{ 		
 		  		element = __mul24(BLOCK_SIZE, bid)+ j;
-		  		block_sum += idata[element];
 				temp[j] = temp[j-1]+idata[element-1];
 			
 		  	}
-		  	if(i== 0)
-		  	partial[i] = 0;
-		  	else partial[i] = block_sum+partial[i-1];
 		  	syncthreads();
 	 }
-		
-	for(int i = 0; i < STEPS;i++)
-	if(i == mbid-1)
-	{
-	  	for(int j = 0; j < BLOCK_SIZE; j++)
-	  	{
-	  	element = __mul24(BLOCK_SIZE, i)+ j;
-	  	odata[element] = temp[j]+partial[i];
-	  	}
-	  	syncthreads();
-	  }
-} 
+	 //end of parallel sums per TB
 	 
+		
+	
+	for(int i = 0; i < STEPS; i++)
+		if (i == 0)
+		{
+			for(int j = 0; j < BLOCK_SIZE; j++)
+		  	{
+		  	odata[j] = temp[j];
+		  	//odata[j] = bid;
+		  	}
+		  	partial[0] = temp[BLOCK_SIZE-1]+idata[BLOCK_SIZE-1];
+		  	syncthreads();
+		  	
+		}
+		else
+		{
+		        //partial[0] += temp[0];
+		  	for(int j = 0; j < BLOCK_SIZE; j++)
+		  	{
+		  	element = __mul24(BLOCK_SIZE, 1)+ j;
+		  	odata[element] = partial[0]+temp[j];
+		  	//odata[element]= bid;
+		  	}
+		  	partial[1] = temp[BLOCK_SIZE-1];
+		  	syncthreads();
+		  	
+		}	
+		syncthreads();
+	}
+	
 
 
 
