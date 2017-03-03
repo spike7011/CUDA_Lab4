@@ -18,6 +18,9 @@ __device__ float partial[STEPS];
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
 	int tid = __mul24(threadIdx.y, 16) + threadIdx.x;
+	int bid = blockIdx.x;
+	if(bid == 0 && tid == 0)
+		odata[0] = 0;
 	__shared__  int mbid;
 	if(tid == 0)
 		mbid = atomicAdd(&count, 1);
@@ -25,34 +28,30 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	//each thread block obtains it's local blockId in the shared variable mbid
 	
 	
-	int bid = blockIdx.x;
+	
 	int element;
 	
 	
 		
 	__shared__ float temp[BLOCK_SIZE];
 	
-	
-	odata[0] = 0;
- 	
- 	
-	
-	temp[0] = 0;
-	
-	syncthreads();
-	
 	//each thread block does a partial summation
 	for(int i = 0; i < STEPS; i++)
 	{
+			temp[0] = 0;
 		 	for(int j = 1; j < BLOCK_SIZE; j++)
 		  	{ 		
 		  		element = __mul24(BLOCK_SIZE, bid)+ j;
 				temp[j] = temp[j-1]+idata[element-1];
-			
+				
 		  	}
+		  	
+		  	
 		  	syncthreads();
+		  	
 	 }
-	 //end of parallel sums per TB
+	 //syncthreads();
+	 //end of parall+el sums per TB
 	 
 	__shared__  int mbid_done;
 	if(tid == 0)
@@ -62,7 +61,7 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	
 	
 	for(int i = 0; i < STEPS; i++)
-		if (mbid == 0 && mbid_done == 0)
+		if (bid == 0 )
 		{
 			for(int j = 0; j < BLOCK_SIZE; j++)
 		  	{
@@ -70,20 +69,20 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 		  	//odata[j] = bid;
 		  	}
 		  	partial[0] = temp[BLOCK_SIZE-1]+idata[BLOCK_SIZE-1];
-		  	syncthreads();
+		  	//syncthreads();
 		  	
 		}
-		else if (mbid <= mbid_done)
+		else if (bid <= count2)
 		{
 		        //partial[0] += temp[0];
 		  	for(int j = 0; j < BLOCK_SIZE; j++)
 		  	{
-		  	element = __mul24(BLOCK_SIZE, 1)+ j;
-		  	odata[element] = partial[0]+temp[j];
-		  	//odata[element]= bid;
+		  	element = __mul24(BLOCK_SIZE, bid)+ j;
+		  	odata[element] = temp[j] + partial[bid-1];
+		  	//odata[element]= partial[bid-1];
 		  	}
-		  	partial[1] = temp[BLOCK_SIZE-1];
-		  	syncthreads();
+		  	partial[bid] = temp[BLOCK_SIZE-1]+partial[bid-1];//+idata[BLOCK_SIZE*i-1];
+		  	//syncthreads();
 		  	
 		}	
 		syncthreads();
