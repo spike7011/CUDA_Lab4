@@ -20,10 +20,7 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	int bid = blockIdx.x;
 	int element;
 	
-	__shared__  int mbid;
-	if(tid == 0)
-		mbid = atomicAdd(&count, 1);
-	syncthreads();
+	
 		
 	__shared__ float temp[BLOCK_SIZE];
 	
@@ -49,10 +46,14 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	 }
 	 //end of parallel sums per TB
 	 
-		
+	__shared__  int mbid;
+	if(tid == 0)
+		mbid = atomicAdd(&count, 1);
+	syncthreads();
+	//running this code here ensures that it only increments when a block finishes
 	
 	for(int i = 0; i < STEPS; i++)
-		if (i == 0)
+		if (mbid == 0)
 		{
 			for(int j = 0; j < BLOCK_SIZE; j++)
 		  	{
