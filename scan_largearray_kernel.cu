@@ -9,7 +9,8 @@
 // Lab4: Host Helper Functions (allocate your own data structure...)
 
 // Lab4: Device Functions
-__device__ int count = -1;
+__device__ int count = -1;    //keeps track of number of launched blocks
+__device__ int count2 = -1;  // keeps track of which blocks are finished doing local scan
 __device__ float partial[STEPS];
 //__device__ double global_block_sum = 0;
 
@@ -17,6 +18,13 @@ __device__ float partial[STEPS];
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 {
 	int tid = __mul24(threadIdx.y, 16) + threadIdx.x;
+	__shared__  int mbid;
+	if(tid == 0)
+		mbid = atomicAdd(&count, 1);
+	syncthreads();
+	//each thread block obtains it's local blockId in the shared variable mbid
+	
+	
 	int bid = blockIdx.x;
 	int element;
 	
@@ -46,14 +54,15 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	 }
 	 //end of parallel sums per TB
 	 
-	__shared__  int mbid;
+	__shared__  int mbid_done;
 	if(tid == 0)
-		mbid = atomicAdd(&count, 1);
+		mbid_done = atomicAdd(&count2, 1);
 	syncthreads();
-	//running this code here ensures that it only increments when a block finishes
+	
+	
 	
 	for(int i = 0; i < STEPS; i++)
-		if (mbid == 0)
+		if (mbid == 0 && mbid_done == 0)
 		{
 			for(int j = 0; j < BLOCK_SIZE; j++)
 		  	{
@@ -64,7 +73,7 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 		  	syncthreads();
 		  	
 		}
-		else
+		else if (mbid <= mbid_done)
 		{
 		        //partial[0] += temp[0];
 		  	for(int j = 0; j < BLOCK_SIZE; j++)

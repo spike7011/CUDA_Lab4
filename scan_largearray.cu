@@ -243,13 +243,15 @@ runTest( int argc, char** argv)
     {
         WriteFile(h_data, argv[1], num_elements);
     }
-
+	if(PRINT)
+	{
  	printf("\nGPU/CPU output: \n");
      for(int i = 0; i < DEFAULT_NUM_ELEMENTS; i++)
      {
        printf("%g %g %g\n", h_data[i], reference[i], input[i]);
      }
      printf("\n\n\n\n\n\n");
+     }
 	
     // Check if the result is equivalent to the expected soluion
     unsigned int result_regtest = cutComparef( reference, h_data, num_elements);
