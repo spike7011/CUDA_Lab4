@@ -11,6 +11,7 @@
 // Lab4: Device Functions
 __device__ uint32_t count = 0;    //keeps track of number of launched blocks
 __device__ uint32_t count2 = 0;  // keeps track of which blocks are finished doing local scan
+__device__ uint32_t done = 0;
 __device__ float partial[100];
 //__device__ double global_block_sum = 0;
 
@@ -22,8 +23,9 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	__shared__ uint32_t index;
 	
 	__shared__ uint32_t  mbid;
+	__shared__ uint32_t  mbid2;
 	__shared__ float temp[BLOCK_SIZE];
-	
+	__shared__ int prec;
 	if(tid == 0)
 	{
 		mbid = atomicInc(&count, (unsigned int) -1);
@@ -34,21 +36,23 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 			temp[j] = temp[j-1]+idata[index + j - 1];
 	  }
 		partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
-	  
-	  //index = __mul24(BLOCK_SIZE, mbid);
-		}
-   
-   if(tid == 0)
-     atomicInc(&count2, (unsigned int) -1 );
+    prec = count2 < mbid;
+    mbid2= atomicInc(&count2, (unsigned int) -1 );
+    if(mbid2 == 15)
+      done = 1;
+	}
+  syncthreads();
+ while(!done)
+   {
    syncthreads();
-   int done = 0;
-  
-	
+   } 
+   
+ 	
 	float p = 0;
 	if (mbid>0) 
     for (int o=0;o<mbid;o++)
       p += partial[o];
-	odata[index+tid] = p + temp[tid] ;
+	odata[index+tid] =  p + temp[tid] ;
 	
   syncthreads();
   
