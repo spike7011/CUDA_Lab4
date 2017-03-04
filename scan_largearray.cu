@@ -43,6 +43,10 @@
 #include <math.h>
 #include <cutil.h>
 #include "CONSTANTS.h"
+#include <cuda.h>
+#include <stdint.h>
+
+
 
 // includes, kernels
 #include <scan_largearray_kernel.cu>
