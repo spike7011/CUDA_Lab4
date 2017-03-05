@@ -12,8 +12,7 @@
 __device__ uint32_t count = 0;    //keeps track of number of launched blocks
 __device__ uint32_t count2 = 0;  // keeps track of which blocks are finished doing local scan
 __device__ uint32_t done = 0;
-__device__ float partial[100];
-//__device__ double global_block_sum = 0;
+__device__ double partial[STEPS];
 
 // Lab4: Kernel Functions
 __global__ void computeKernel( float* odata, float* idata, unsigned int len)
@@ -24,7 +23,7 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 	
 	__shared__ uint32_t  mbid;
 	__shared__ uint32_t  mbid2;
-	__shared__ float temp[BLOCK_SIZE];
+	__shared__ double temp[BLOCK_SIZE];
 	__shared__ int prec;
 	if(tid == 0)
 	{
@@ -36,27 +35,28 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
 			temp[j] = temp[j-1]+idata[index + j - 1];
 	  }
 		partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
-    prec = count2 < mbid;
-    mbid2= atomicInc(&count2, (unsigned int) -1 );
-    if(mbid2 == 15)
-      done = 1;
 	}
-  syncthreads();
- while(!done)
-   {
-   syncthreads();
-   } 
-   
+ 
+  while(count2 < mbid)
+    syncthreads();
+
+  mbid2= atomicInc(&count2, (unsigned int) -1 );   
  	
-	float p = 0;
-	if (mbid>0) 
-    for (int o=0;o<mbid;o++)
-      p += partial[o];
+	__shared__ double p;
+ 	
+  if(tid == 0)
+	{
+    p=0;
+  	if (mbid>0) 
+      for (int o=0;o<mbid;o++)
+        p += partial[o];
+  }
+
+  syncthreads();
+  
 	odata[index+tid] =  p + temp[tid] ;
 	
   syncthreads();
-  
- 
 }
 	
 __global__ void computeKernel_o1( float* odata, float* idata, unsigned int len)
@@ -146,6 +146,50 @@ __global__ void computeKernel_o1( float* odata, float* idata, unsigned int len)
 	}
 	
 }
+
+__global__ void computeKernel_o2( float* odata, float* idata, unsigned int len)
+{
+	uint32_t tid = threadIdx.x;
+	uint32_t bid = blockIdx.x;
+	__shared__ uint32_t index;
+	
+	__shared__ uint32_t  mbid;
+	__shared__ uint32_t  mbid2;
+	__shared__ double temp[BLOCK_SIZE];
+	__shared__ int prec;
+	if(tid == 0)
+	{
+		mbid = atomicInc(&count, (unsigned int) -1);
+		index = __mul24(BLOCK_SIZE, mbid);
+		temp[0]=0;
+	 	for(int j = 1; j < BLOCK_SIZE; j++)
+  	{ 		
+			temp[j] = temp[j-1]+idata[index + j - 1];
+	  }
+		partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
+	}
+ 
+  while(count2 < mbid)
+    syncthreads();
+
+  mbid2= atomicInc(&count2, (unsigned int) -1 );   
+ 	
+	__shared__ double p;
+ 	
+  if(tid == 0)
+	{
+    p=0;
+  	if (mbid>0) 
+      for (int o=0;o<mbid;o++)
+        p += partial[o];
+  }
+
+  syncthreads();
+  
+	odata[index+tid] =  p + temp[tid] ;
+	
+  syncthreads();
+}
 	
 
 
@@ -161,7 +205,7 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 	dim3 dimBlock(BLOCK_SIZE,1);
 
 	unsigned int len = DEFAULT_NUM_ELEMENTS;
-	computeKernel <<< dimGrid, dimBlock >>> (outArray , inArray, len);
+	computeKernel_o2 <<< dimGrid, dimBlock >>> (outArray , inArray, len);
 }
 // **===-----------------------------------------------------------===**
 
