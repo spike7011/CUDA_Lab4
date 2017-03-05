@@ -164,7 +164,11 @@ __global__ void computeKernel_o2( float* odata, float* idata, unsigned int len)
 		temp[0]=0;
 	 	for(int j = 1; j < BLOCK_SIZE; j++)
   	{ 		
-			temp[j] = temp[j-1]+idata[index + j - 1];
+			
+      
+      //start modifiying here
+      
+      temp[j] = temp[j-1]+idata[index + j - 1];
 	  }
 		partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
 	}
