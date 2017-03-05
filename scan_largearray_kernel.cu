@@ -59,93 +59,7 @@ __global__ void computeKernel( float* odata, float* idata, unsigned int len)
   syncthreads();
 }
 	
-__global__ void computeKernel_o1( float* odata, float* idata, unsigned int len)
-{
 
-	
-	int tid = threadIdx.x;
-	int bid = blockIdx.x;
-	if(bid == 0 && tid == 0)
-		odata[0] = 0;
-	__shared__  int mbid;
-	if(tid == 0)
-		mbid = atomicAdd(&count, 1);
-	syncthreads();
-	//each thread block obtains it's local blockId in the shared variable mbid
-	
-	
-	
-	int element;
-	
-	
-		
-	__shared__ float temp[BLOCK_SIZE+1];
-	for (int j = 0; j < STEPS; j++)
-	{
-		int stride = 2;
-		
-		memcpy(temp, idata+j*BLOCK_SIZE, sizeof(float)*BLOCK_SIZE);
-		while(stride < PRINT_NUM)
-		{
-		if(tid<BLOCK_SIZE)
-			if((tid+1)%stride == 0)
-				temp[tid] = temp[tid] + temp[tid-stride/2];
-		syncthreads();
-		stride*=2;
-		}
-		
-		//post scan step
-		stride /=2 ;
-		while(stride > 1)
-		{
-		if(tid < BLOCK_SIZE && tid != 0)
-			if(tid - stride >= 0)
-					if((tid-stride)%(stride/2) == 0)
-						temp[tid] += temp[tid-stride/2];
-		syncthreads();
-		stride /= 2;
-		
-		}
-		
-			
-	 }//syncthreads();
-	
-	 
-	
-	
-	
-	
-	for(int i = 0; i < STEPS; i++)
-	{
-		if (bid == 0 )
-		{
-			for(int j = 0; j < BLOCK_SIZE; j++)
-		  	{
-		  	odata[j] = temp[j];
-		  	//odata[j] = bid;
-		  	}
-		  	partial[0] = temp[BLOCK_SIZE-1]+idata[BLOCK_SIZE-1];
-		  	//syncthreads();
-		  	
-		}
-		/*else if (bid <= count2)
-		{
-		        //partial[0] += temp[0];
-		  	for(int j = 0; j < 8; j++)
-		  	{
-		  	element = __mul24(BLOCK_SIZE, bid)+ j;
-		  	odata[element] = temp[j]; //+ partial[bid-1];
-		  	//odata[element]= partial[bid-1];
-		  	}
-		  	partial[bid] = temp[BLOCK_SIZE-1]+partial[bid-1];//+idata[BLOCK_SIZE*i-1];
-		  	//syncthreads();
-		  	
-		}	*/
-		syncthreads();
-		
-	}
-	
-}
 
 __global__ void computeKernel_o2( float* odata, float* idata, unsigned int len)
 {
@@ -155,23 +69,58 @@ __global__ void computeKernel_o2( float* odata, float* idata, unsigned int len)
 	
 	__shared__ uint32_t  mbid;
 	__shared__ uint32_t  mbid2;
-	__shared__ double temp[BLOCK_SIZE];
+	__shared__ float temp[BLOCK_SIZE];
 	__shared__ int prec;
 	if(tid == 0)
 	{
+   if(mbid == 0)
+    odata[0]=0;
 		mbid = atomicInc(&count, (unsigned int) -1);
-		index = __mul24(BLOCK_SIZE, mbid);
-		temp[0]=0;
-	 	for(int j = 1; j < BLOCK_SIZE; j++)
-  	{ 		
-			
-      
+  }
+  syncthreads();
+  
+// magic begins
+	index = __mul24(BLOCK_SIZE, mbid);
+	temp[0]=0;
+ 
+	//reduction step
+	memcpy(temp, idata+index, sizeof(float)*BLOCK_SIZE);
+  int stride = 1;
+  while (stride < BLOCK_SIZE)
+  {
+     int pos = (tid+1)*stride*2 -1;
+     if (pos < BLOCK_SIZE)
+       if((pos-stride) >= 0)
+       temp[pos] = temp[pos] + temp[pos-stride];
+     stride = stride*2;
+    syncthreads();
+  }
+  
+  
+  
+  stride = BLOCK_SIZE / 2;
+  while(stride > 0)
+  {
+    int index = (threadIdx.x+1)*stride*2 - 1;
+    if(index < BLOCK_SIZE) 
+      temp[index+stride] = temp[index] + temp[index+stride];
+    stride /= 2;
+  syncthreads();
+  }
+   
+  partial[mbid] = temp[BLOCK_SIZE-1];
+ 
+ 	/*or(int j = 1; j < BLOCK_SIZE; j++)
+ 	{ 		
+			      
       //start modifiying here
       
       temp[j] = temp[j-1]+idata[index + j - 1];
-	  }
-		partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
-	}
+  }
+	partial[mbid] = temp[BLOCK_SIZE-1] + idata[index + BLOCK_SIZE-1];
+*/
+
+// magic ends
  
   while(count2 < mbid)
     syncthreads();
@@ -190,7 +139,7 @@ __global__ void computeKernel_o2( float* odata, float* idata, unsigned int len)
 
   syncthreads();
   
-	odata[index+tid] =  p + temp[tid] ;
+	odata[index+tid+1] =  temp[tid] + p;
 	
   syncthreads();
 }
@@ -209,7 +158,7 @@ void prescanArray(float *outArray, float *inArray, int numElements)
 	dim3 dimBlock(BLOCK_SIZE,1);
 
 	unsigned int len = DEFAULT_NUM_ELEMENTS;
-	computeKernel_o2 <<< dimGrid, dimBlock >>> (outArray , inArray, len);
+	computeKernel <<< dimGrid, dimBlock >>> (outArray , inArray, len);
 }
 // **===-----------------------------------------------------------===**
 
