@@ -42,15 +42,11 @@
 #include <string.h>
 #include <math.h>
 #include <cutil.h>
-#include "CONSTANTS.h"
-#include <cuda.h>
-#include <stdint.h>
-
-
 
 // includes, kernels
 #include <scan_largearray_kernel.cu>
 
+#define DEFAULT_NUM_ELEMENTS 16777216
 #define MAX_RAND 3
 
 
@@ -86,14 +82,13 @@ runTest( int argc, char** argv)
     int errorM = 0;
     float device_time;
     float host_time;
-    int* size = 0;
+    int* size = NULL; //(int*)malloc(1 * sizeof(int));
     unsigned int data2read = 1;
     int num_elements = 0; // Must support large, non-power-of-2 arrays
 
     // allocate host memory to store the input data
     unsigned int mem_size = sizeof( float) * num_elements;
     float* h_data = (float*) malloc( mem_size);
-    float* input = (float*) malloc(mem_size);
 
     // * No arguments: Randomly generate input data and compare against the
     //   host's result.
@@ -115,17 +110,15 @@ runTest( int argc, char** argv)
                 exit(1);
             }
 
-            num_elements = DEFAULT_NUM_ELEMENTS;
+            num_elements = size[0];
 
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
-            input = (float*) malloc(mem_size);
 
             for( unsigned int i = 0; i < num_elements; ++i)
             {
                 h_data[i] = (int)(rand() % MAX_RAND);
-                input[i] = h_data[i];
             }
             WriteFile(h_data, argv[2], num_elements);
         break;
@@ -142,11 +135,8 @@ runTest( int argc, char** argv)
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
-            input = (float*) malloc(mem_size);
 
             errorM = ReadFile(h_data, argv[2], size[0]);
-            errorM = ReadFile(input, argv[2], size[0]);
-            
             if(errorM != 1)
             {
                 printf("Error reading input file!\n");
@@ -163,14 +153,12 @@ runTest( int argc, char** argv)
             // allocate host memory to store the input data
             mem_size = sizeof( float) * num_elements;
             h_data = (float*) malloc( mem_size);
-            input = (float*) malloc(mem_size);
 
             // initialize the input data on the host
             for( unsigned int i = 0; i < num_elements; ++i)
             {
 //                h_data[i] = 1.0f;
                 h_data[i] = (int)(rand() % MAX_RAND);
-                input[i] = h_data[i];
             }
         break;
     }
@@ -183,11 +171,7 @@ runTest( int argc, char** argv)
     // compute reference solution
     float* reference = (float*) malloc( mem_size);
 	cutStartTimer(timer);
- 
     computeGold( reference, h_data, num_elements);
- // printf("\nCPU output: \n");
-  
-
 	cutStopTimer(timer);
     printf("\n\n**===-------------------------------------------------===**\n");
     printf("Processing %d elements...\n", num_elements);
@@ -204,7 +188,6 @@ runTest( int argc, char** argv)
     CUDA_SAFE_CALL( cudaMalloc( (void**) &d_odata, mem_size));
 
     // copy host memory to device input array
-   
     CUDA_SAFE_CALL( cudaMemcpy( d_idata, h_data, mem_size, cudaMemcpyHostToDevice) );
     // initialize all the other device arrays to be safe
     CUDA_SAFE_CALL( cudaMemcpy( d_odata, h_data, mem_size, cudaMemcpyHostToDevice) );
@@ -213,7 +196,7 @@ runTest( int argc, char** argv)
 
     // Run just once to remove startup overhead for more accurate performance
     // measurement
-   // prescanArray(d_odata, d_idata, 16);
+    //prescanArray(d_odata, d_idata, 16);
 
     // Run the prescan
     CUT_SAFE_CALL(cutCreateTimer(&timer));
@@ -235,7 +218,6 @@ runTest( int argc, char** argv)
 
 
     // copy result from device to host
-    
     CUDA_SAFE_CALL(cudaMemcpy( h_data, d_odata, sizeof(float) * num_elements,
                                cudaMemcpyDeviceToHost));
 
@@ -247,31 +229,24 @@ runTest( int argc, char** argv)
     {
         WriteFile(h_data, argv[1], num_elements);
     }
-	if(PRINT)
-	{
- 	printf("\nGPU/CPU output: \n");
-     for(int i = 0; i < PRINT_NUM; i++)
-     {
-       //if( h_data[i] != reference[i] )
-         printf("%d: %f %f %f\n", i, h_data[i], reference[i], input[i]);
-     }
-     printf("\n\n\n\n\n\n");
-  }
-	
+
+
     // Check if the result is equivalent to the expected soluion
     unsigned int result_regtest = cutComparef( reference, h_data, num_elements);
+  //  for(int i =0; i < DEFAULT_NUM_ELEMENTS; i++)
+    //  if(h_data[i] != reference[i])
+      //  printf("\n%d: CPU IS: %d, GPU IS %d",i,reference[i],h_data[i]);
+
+
     printf( "Test %s\n", (1 == result_regtest) ? "PASSED" : "FAILED");
 
     // cleanup memory
     cutDeleteTimer(timer);
-    free(h_data);
-    free(reference);
-    free(input);
+    free( h_data);
+    free( reference);
     cudaFree( d_odata);
     cudaFree( d_idata);
 }
-
-
 
 
 int ReadFile(float* M, char* file_name, int size)
